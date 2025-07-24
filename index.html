@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Intro Retro NES</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
+      font-family: monospace;
+    }
+    #skip {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: #ff0000;
+      color: #fff;
+      padding: 8px 15px;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+      font-family: monospace;
+      box-shadow: 2px 2px #fff;
+    }
+    #skip:hover {
+      background: #fff;
+      color: #000;
+      box-shadow: 2px 2px #ff0000;
+    }
+  </style>
+</head>
+<body>
+  <button id="skip" onclick="window.location.href='inicio.html'">SALTAR</button>
+
+  <script>
+    let titulo = "MI TIENDA RETRO";
+    let letras = [];
+    let glitchTimer = 0;
+    let particles = [];
+
+    function setup() {
+      createCanvas(windowWidth, windowHeight);
+      textFont('monospace');
+      textAlign(CENTER, CENTER);
+      textSize(48);
+
+      // Posiciones iniciales (caen desde arriba)
+      for (let i = 0; i < titulo.length; i++) {
+        letras.push({ 
+          char: titulo[i], 
+          x: width/2 - (titulo.length*15) + i*30, 
+          y: random(-200, -50), 
+          targetY: height/2 - 20, 
+          speed: random(3,6)
+        });
+      }
+
+      // Partículas retro (como estrellas)
+      for (let i = 0; i < 80; i++) {
+        particles.push(new Particle());
+      }
+    }
+
+    function draw() {
+      background(0);
+
+      // Fondo estrellas
+      for (let p of particles) {
+        p.update();
+        p.show();
+      }
+
+      // Título cayendo
+      fill(255, 0, 0);
+      stroke(255);
+      strokeWeight(2);
+
+      for (let l of letras) {
+        if (l.y < l.targetY) {
+          l.y += l.speed;
+        }
+        text(l.char, l.x, l.y);
+      }
+
+      // Efecto glitch cada tanto
+      glitchTimer++;
+      if (glitchTimer % 30 === 0) {
+        push();
+        translate(random(-5,5), random(-5,5));
+        tint(255, random(100,255));
+        for (let l of letras) {
+          text(l.char, l.x + random(-3,3), l.y + random(-3,3));
+        }
+        pop();
+      }
+
+      // Subtítulo estilo NES
+      noStroke();
+      fill(255);
+      textSize(20);
+      text("PRESIONA START", width/2, height/2 + 60);
+    }
+
+    class Particle {
+      constructor() {
+        this.x = random(width);
+        this.y = random(height);
+        this.size = random(1,3);
+        this.speedY = random(1,3);
+      }
+      update() {
+        this.y += this.speedY;
+        if (this.y > height) {
+          this.y = 0;
+          this.x = random(width);
+        }
+      }
+      show() {
+        noStroke();
+        fill(255);
+        rect(this.x, this.y, this.size, this.size);
+      }
+    }
+
+    function windowResized() {
+      resizeCanvas(windowWidth, windowHeight);
+    }
+  </script>
+</body>
+</html>
