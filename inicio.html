@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tienda Retro Moderna</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      background: transparent;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #fff;
+    }
+
+    /* Contenedor principal flotante */
+    .content {
+      position: relative;
+      z-index: 10; /* Para que quede arriba del canvas */
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(5px);
+      border-radius: 12px;
+      max-width: 1200px;
+      margin: 60px auto;
+      padding: 20px;
+      box-shadow: 0 0 20px rgba(255,255,255,0.2);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #ff0000;
+      text-shadow: 2px 2px #fff;
+      font-weight: bold;
+    }
+
+    .producto-card {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+      backdrop-filter: blur(2px);
+    }
+
+    .producto-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 0 15px rgba(255,255,255,0.5);
+    }
+
+    .precio {
+      color: #28a745;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <!-- ✅ Contenido de la tienda -->
+  <div class="content container">
+    <h1>Productos Destacados</h1>
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="card producto-card p-3">
+          <img src="https://via.placeholder.com/300x200" class="card-img-top" alt="Producto 1">
+          <div class="card-body">
+            <h5 class="card-title">Producto Retro 1</h5>
+            <p class="card-text">Descripción breve del producto, estilo gamer.</p>
+            <p class="precio">$100</p>
+            <button class="btn btn-primary w-100">Comprar</button>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card producto-card p-3">
+          <img src="https://via.placeholder.com/300x200" class="card-img-top" alt="Producto 2">
+          <div class="card-body">
+            <h5 class="card-title">Producto Retro 2</h5>
+            <p class="card-text">Descripción breve del producto, estilo gamer.</p>
+            <p class="precio">$120</p>
+            <button class="btn btn-primary w-100">Comprar</button>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card producto-card p-3">
+          <img src="https://via.placeholder.com/300x200" class="card-img-top" alt="Producto 3">
+          <div class="card-body">
+            <h5 class="card-title">Producto Retro 3</h5>
+            <p class="card-text">Descripción breve del producto, estilo gamer.</p>
+            <p class="precio">$150</p>
+            <button class="btn btn-primary w-100">Comprar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ Fondo animado retro con p5.js -->
+  <script>
+    let stars = [];
+
+    function setup() {
+      let canvas = createCanvas(windowWidth, windowHeight);
+      canvas.position(0, 0);
+      canvas.style('z-index', '-1'); // Fondo detrás
+      for (let i = 0; i < 150; i++) {
+        stars.push(new Star());
+      }
+    }
+
+    function draw() {
+      background(0);
+      for (let s of stars) {
+        s.update();
+        s.show();
+      }
+    }
+
+    class Star {
+      constructor() {
+        this.x = random(width);
+        this.y = random(height);
+        this.size = random(1, 3);
+        this.speed = random(0.5, 2);
+      }
+      update() {
+        this.y += this.speed;
+        if (this.y > height) {
+          this.y = 0;
+          this.x = random(width);
+        }
+      }
+      show() {
+        noStroke();
+        fill(255, random(150,255));
+        rect(this.x, this.y, this.size, this.size);
+      }
+    }
+
+    function windowResized() {
+      resizeCanvas(windowWidth, windowHeight);
+    }
+  </script>
+</body>
+</html>
