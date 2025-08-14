@@ -1,134 +1,301 @@
-<!DOCTYPE html>
-<html lang="es">
+<!DOCTYPE html><html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Intro Retro NES</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HM · Emparejar herramienta ↔ uso</title>
   <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: #000;
-      font-family: monospace;
+    :root {
+      --bg: #f7f7fb;
+      --card: #ffffff;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --good: #16a34a;
+      --warn: #ef4444;
+      --radius: 16px;
+      --shadow: 0 10px 30px rgba(0,0,0,.08);
     }
-    #skip {
-      position: absolute;
-      bottom: 20px;
-      right: 20px;
-      background: #ff0000;
-      color: #fff;
-      padding: 8px 15px;
-      border: none;
-      font-size: 1rem;
-      cursor: pointer;
-      font-family: monospace;
-      box-shadow: 2px 2px #fff;
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--bg); color: var(--ink);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, "Noto Sans", Arial, sans-serif;
     }
-    #skip:hover {
-      background: #fff;
-      color: #000;
-      box-shadow: 2px 2px #ff0000;
+    header {
+      position: sticky; top: 0; z-index: 5; background: var(--bg);
+      padding: 16px; border-bottom: 1px solid #ececf4;
     }
+    header h1 { margin: 0 0 6px; font-size: 20px; }
+    header .hint { color: var(--muted); font-size: 14px; }.toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.btn {
+  background: var(--card); border: 1px solid #e5e7eb; color: var(--ink);
+  padding: 8px 12px; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow);
+  font-weight: 600; font-size: 14px;
+}
+.btn.primary { background: var(--accent); color: white; border-color: transparent; }
+.btn.ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--muted); }
+
+.app {
+  display: grid; grid-template-columns: 1fr minmax(220px, 1040px) 1fr; gap: 16px;
+  padding: 16px; height: calc(100% - 90px);
+}
+.col {
+  background: var(--card); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow);
+  overflow: auto; position: relative; min-height: 60vh;
+}
+.col h2 { margin: 6px 8px 12px; font-size: 16px; color: var(--muted); }
+
+.grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; padding: 8px;
+}
+.card {
+  background: #fff; border: 1px solid #eee; border-radius: 14px; overflow: hidden; cursor: pointer;
+  transition: transform .1s ease, box-shadow .1s ease, border-color .2s ease;
+}
+.card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+.card.selected { outline: 3px solid var(--accent); border-color: var(--accent); }
+.card.matched { outline: 3px solid var(--good); border-color: var(--good); }
+.thumb { width: 100%; aspect-ratio: 4/3; object-fit: cover; background: #fafafa; }
+.label { padding: 8px 10px; font-weight: 700; font-size: 14px; }
+
+/* Middle pane holds the SVG arrows overlaying two inner columns */
+.board { position: relative; height: 100%; }
+.inner { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; height: 100%; }
+.pane { background: var(--card); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); overflow: auto; }
+.pane h2 { margin: 6px 8px 12px; font-size: 16px; color: var(--muted); }
+.svg-overlay { position: absolute; inset: 0; pointer-events: none; }
+
+.legend { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.footer { text-align: center; color: var(--muted); font-size: 12px; padding: 10px 0 20px; }
+
+@media (max-width: 1100px) {
+  .app { grid-template-columns: 1fr; height: auto; }
+  .board { height: auto; }
+  .svg-overlay { display: none; }
+}
+
   </style>
 </head>
 <body>
-  <button id="skip" onclick="window.location.href='inicio.html'">START</button>
+  <header>
+    <h1>HM · Emparejar herramienta ↔ uso (con flechas)</h1>
+    <div class="hint">1) Hacé clic en una <b>herramienta</b> (izquierda) · 2) Hacé clic en un <b>uso</b> (derecha) · 3) Se dibuja la flecha. Botones: Deshacer / Reiniciar.</div>
+    <div class="toolbar">
+      <button class="btn" id="undoBtn">↶ Deshacer última flecha</button>
+      <button class="btn" id="resetBtn">⟲ Reiniciar</button>
+      <button class="btn ghost" id="shuffleBtn">🔀 Mezclar usos</button>
+    </div>
+  </header>  <main class="app">
+    <aside class="col" id="leftCol">
+      <h2>Herramientas</h2>
+      <div class="grid" id="toolsGrid"></div>
+      <div class="legend">Podés cambiar imágenes/URLs editando el código (array <code>TOOLS</code>).</div>
+    </aside><section class="board" id="board">
+  <svg class="svg-overlay" id="wires"></svg>
+  <div class="inner">
+    <div class="pane">
+      <h2>Herramientas (columna espejo)</h2>
+      <div class="grid" id="toolsMirror"></div>
+    </div>
+    <div class="pane">
+      <h2>Usos / Acciones</h2>
+      <div class="grid" id="actionsGrid"></div>
+    </div>
+  </div>
+</section>
 
-  <script>
-    let titulo = "Retrogeek";
-    let letras = [];
-    let glitchTimer = 0;
-    let particles = [];
+<aside class="col" id="rightCol">
+  <h2>Parejas creadas</h2>
+  <ol id="pairsList"></ol>
+  <div class="footer">HM · Escuela Integral · Actividad de reconocimiento con apoyo visual</div>
+</aside>
 
-    function setup() {
-      createCanvas(windowWidth, windowHeight);
-      textFont('monospace');
-      textAlign(CENTER, CENTER);
-      textSize(10);
+  </main>  <script>
+    // ======= Datos (editables) =======
+    const TOOLS = [
+      { id: 'martillo',  nombre: 'Martillo',        img: 'https://upload.wikimedia.org/wikipedia/commons/4/4f/Hammer.jpg' },
+      { id: 'serrucho',  nombre: 'Serrucho',        img: 'https://upload.wikimedia.org/wikipedia/commons/5/54/Hand_saw.jpg' },
+      { id: 'taladro',   nombre: 'Taladro',         img: 'https://upload.wikimedia.org/wikipedia/commons/d/da/Power_drill.jpg' },
+      { id: 'lijadora',  nombre: 'Lijadora',        img: 'https://upload.wikimedia.org/wikipedia/commons/a/a5/Random_orbital_sander.jpg' },
+      { id: 'formon',    nombre: 'Formón',          img: 'https://upload.wikimedia.org/wikipedia/commons/1/1b/Wood_chisel.JPG' },
+      { id: 'cepillo',   nombre: 'Cepillo manual',  img: 'https://upload.wikimedia.org/wikipedia/commons/7/73/Hand_plane.jpg' },
+      { id: 'caladora',  nombre: 'Caladora',        img: 'https://upload.wikimedia.org/wikipedia/commons/1/1f/Jigsaw_side.jpg' },
+      { id: 'metro',     nombre: 'Cinta métrica',   img: 'https://upload.wikimedia.org/wikipedia/commons/2/2d/Tape_measure.jpg' },
+    ];
 
-      // Posiciones iniciales (caen desde arriba)
-      for (let i = 0; i < titulo.length; i++) {
-        letras.push({ 
-          char: titulo[i], 
-          x: width/2 - (titulo.length*15) + i*30, 
-          y: random(-200, -50), 
-          targetY: height/2 - 20, 
-          speed: random(3,6)
+    const ACTIONS = [
+      { id: 'clavar',  nombre: 'Clavar un clavo',      img: 'https://via.placeholder.com/320x220?text=Clavar+un+clavo' },
+      { id: 'cortar',  nombre: 'Cortar madera',        img: 'https://via.placeholder.com/320x220?text=Cortar+madera' },
+      { id: 'agujero', nombre: 'Hacer un agujero',     img: 'https://via.placeholder.com/320x220?text=Hacer+un+agujero' },
+      { id: 'lijar',   nombre: 'Lijar superficie',     img: 'https://via.placeholder.com/320x220?text=Lijar+superficie' },
+      { id: 'tallar',  nombre: 'Tallar / rebajar',     img: 'https://via.placeholder.com/320x220?text=Tallar+%2F+rebajar' },
+      { id: 'alisar',  nombre: 'Alisar la superficie', img: 'https://via.placeholder.com/320x220?text=Alisar+superficie' },
+      { id: 'curvo',   nombre: 'Corte curvo',          img: 'https://via.placeholder.com/320x220?text=Corte+curvo' },
+      { id: 'medir',   nombre: 'Medir',                img: 'https://via.placeholder.com/320x220?text=Medir' },
+    ];
+
+    // ======= Utilidades de UI =======
+    const el = sel => document.querySelector(sel);
+    const makeCard = (item, group) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.id = item.id;
+      card.dataset.group = group; // 'tool' | 'action'
+      const img = document.createElement('img');
+      img.className = 'thumb';
+      img.src = item.img; img.alt = item.nombre;
+      const lbl = document.createElement('div'); lbl.className = 'label'; lbl.textContent = item.nombre;
+      card.append(img, lbl);
+      return card;
+    };
+
+    const toolsGrid = el('#toolsGrid');
+    const toolsMirror = el('#toolsMirror');
+    const actionsGrid = el('#actionsGrid');
+    const pairsList = el('#pairsList');
+    const wires = el('#wires');
+    const board = el('#board');
+
+    // Render de columnas
+    TOOLS.forEach(t => {
+      toolsGrid.appendChild(makeCard(t, 'tool'));
+      toolsMirror.appendChild(makeCard(t, 'tool-mirror'));
+    });
+    ACTIONS.forEach(a => actionsGrid.appendChild(makeCard(a, 'action')));
+
+    // Estado y lógica de emparejado
+    let pending = null; // {id, el}
+    const pairs = [];   // [{toolId, actionId}]
+
+    const clearSelections = () => {
+      document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
+    };
+
+    const setSelected = (card) => {
+      clearSelections();
+      card.classList.add('selected');
+    };
+
+    const addPair = (toolId, actionId) => {
+      // Evitar duplicados
+      if (pairs.find(p => p.toolId === toolId || p.actionId === actionId)) return;
+      pairs.push({ toolId, actionId });
+      // Marcar cards como emparejadas
+      [toolId, actionId].forEach(id => {
+        document.querySelectorAll(`.card[data-id="${id}"]`).forEach(c => c.classList.add('matched'));
+      });
+      renderPairsList();
+      drawAllWires();
+      clearSelections();
+      pending = null;
+    };
+
+    const renderPairsList = () => {
+      pairsList.innerHTML = '';
+      pairs.forEach(({toolId, actionId}, i) => {
+        const tool = TOOLS.find(t => t.id === toolId);
+        const act  = ACTIONS.find(a => a.id === actionId);
+        const li = document.createElement('li');
+        li.textContent = `${i+1}. ${tool?.nombre} → ${act?.nombre}`;
+        pairsList.appendChild(li);
+      });
+    };
+
+    // Click handling
+    document.addEventListener('click', (e) => {
+      const card = e.target.closest('.card');
+      if (!card) return;
+      const group = card.dataset.group;
+      const id = card.dataset.id;
+
+      if (!pending) {
+        // Primera selección debe ser herramienta o acción, pero forzamos empezar por herramienta
+        if (group.startsWith('tool')) {
+          pending = { id, group, el: card };
+          setSelected(card);
+        }
+        return;
+      }
+
+      // Si hay pendiente y ahora clic en acción
+      if (pending && group === 'action') {
+        addPair(pending.id, id);
+      } else {
+        // Si clickeó otra herramienta, cambiamos la selección
+        if (group.startsWith('tool')) setSelected(card), (pending = { id, group, el: card });
+      }
+    });
+
+    // Botones
+    el('#undoBtn').addEventListener('click', () => {
+      const last = pairs.pop();
+      if (last) {
+        // desmarcar matched
+        [last.toolId, last.actionId].forEach(id => {
+          document.querySelectorAll(`.card[data-id="${id}"]`).forEach(c => c.classList.remove('matched'));
         });
+        renderPairsList();
+        drawAllWires();
       }
+    });
 
-      // Partículas retro (como estrellas)
-      for (let i = 0; i < 80; i++) {
-        particles.push(new Particle());
-      }
-    }
+    el('#resetBtn').addEventListener('click', () => {
+      pairs.splice(0, pairs.length);
+      document.querySelectorAll('.card').forEach(c => c.classList.remove('matched', 'selected'));
+      renderPairsList();
+      drawAllWires();
+    });
 
-    function draw() {
-      background(0);
+    el('#shuffleBtn').addEventListener('click', () => {
+      // Mezclar acciones
+      const shuffled = [...ACTIONS].sort(() => Math.random() - 0.5);
+      actionsGrid.innerHTML = '';
+      shuffled.forEach(a => actionsGrid.appendChild(makeCard(a, 'action')));
+      drawAllWires();
+    });
 
-      // Fondo estrellas
-      for (let p of particles) {
-        p.update();
-        p.show();
-      }
+    // ======= Trazado de flechas =======
+    const getCenter = (elem) => {
+      const r = elem.getBoundingClientRect();
+      const base = board.getBoundingClientRect();
+      return { x: r.left - base.left + r.width/2, y: r.top - base.top + r.height/2 };
+    };
 
-      // Título cayendo
-      fill(255, 0, 0);
-      stroke(255);
-      strokeWeight(2);
+    const drawAllWires = () => {
+      wires.innerHTML = '';
+      const toolCards   = Array.from(toolsMirror.querySelectorAll('.card'));
+      const actionCards = Array.from(actionsGrid.querySelectorAll('.card'));
+      pairs.forEach(({toolId, actionId}) => {
+        const a = toolCards.find(c => c.dataset.id === toolId);
+        const b = actionCards.find(c => c.dataset.id === actionId);
+        if (!a || !b) return;
+        const A = getCenter(a), B = getCenter(b);
+        const midX = (A.x + B.x) / 2;
+        const path = `M ${A.x},${A.y} C ${midX},${A.y} ${midX},${B.y} ${B.x},${B.y}`;
+        const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+        p.setAttribute('d', path);
+        p.setAttribute('fill', 'none');
+        p.setAttribute('stroke', 'var(--accent)');
+        p.setAttribute('stroke-width', '3');
+        p.setAttribute('stroke-linecap', 'round');
+        wires.appendChild(p);
+        // Punta de flecha
+        const marker = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+        marker.setAttribute('points', `${B.x},${B.y} ${B.x-8},${B.y-6} ${B.x-8},${B.y+6}`);
+        marker.setAttribute('fill', 'var(--accent)');
+        wires.appendChild(marker);
+      });
+      // Ajustar viewport del SVG
+      wires.setAttribute('viewBox', `0 0 ${board.clientWidth} ${board.clientHeight}`);
+      wires.setAttribute('width', board.clientWidth);
+      wires.setAttribute('height', board.clientHeight);
+    };
 
-      for (let l of letras) {
-        if (l.y < l.targetY) {
-          l.y += l.speed;
-        }
-        text(l.char, l.x, l.y);
-      }
+    const onResize = () => drawAllWires();
+    window.addEventListener('resize', onResize);
+    document.addEventListener('scroll', onResize, true);
 
-      // Efecto glitch cada tanto
-      glitchTimer++;
-      if (glitchTimer % 30 === 0) {
-        push();
-        translate(random(-5,5), random(-5,5));
-        tint(255, random(100,255));
-        for (let l of letras) {
-          text(l.char, l.x + random(-3,3), l.y + random(-3,3));
-        }
-        pop();
-      }
-
-      // Subtítulo estilo NES
-      noStroke();
-      fill(255);
-      textSize(35);
-      text("Tu lugar \n en el mundo..", width/2, height/2 + 60);
-    }
-
-    class Particle {
-      constructor() {
-        this.x = random(width);
-        this.y = random(height);
-        this.size = random(1,3);
-        this.speedY = random(1,3);
-      }
-      update() {
-        this.y += this.speedY;
-        if (this.y > height) {
-          this.y = 0;
-          this.x = random(width);
-        }
-      }
-      show() {
-        noStroke();
-        fill(255);
-        rect(this.x, this.y, this.size, this.size);
-      }
-    }
-
-    function windowResized() {
-      resizeCanvas(windowWidth, windowHeight);
-    }
-  </script>
-</body>
+    // Primera pintura
+    drawAllWires();
+  </script></body>
 </html>
